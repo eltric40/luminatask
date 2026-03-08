@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flux – Task Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #f59e0b;
+            --dark-bg: #0f172a;
+            --dark-surface: #1e293b;
+            --dark-surface-alt: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --text-tertiary: #94a3b8;
+            --accent: #f59e0b;
+            --accent-hover: #d97706;
+            --success: #10b981;
+            --danger: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, var(--dark-bg) 0%, #1a1f35 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Typography */
+        h1 {
+            font-family: 'Syne', sans-serif;
+            font-weight: 700;
+            font-size: 2.5rem;
+            letter-spacing: -0.02em;
+            color: var(--text-primary);
+        }
+
+        h2 {
+            font-family: 'Syne', sans-serif;
+            font-weight: 600;
+            font-size: 1.25rem;
+            letter-spacing: -0.01em;
+            color: var(--text-primary);
+        }
+
+        /* Animations */
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideOutDown {
+            from {
+                opacity: 1;
+                transform: translateY(0) scaleX(1);
+            }
+            to {
+                opacity: 0;
+                transform: translateY(8px) scaleX(0.95);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes checkmarkDraw {
+            from {
+                stroke-dashoffset: 100;
+            }
+            to {
+                stroke-dashoffset: 0;
+            }
+        }
+
+        @keyframes pulse-subtle {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.7;
+            }
+        }
+
+        .task-enter {
+            animation: slideInUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .task-exit {
+            animation: slideOutDown 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        .checkbox-container {
+            position: relative;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .checkbox-input {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .checkbox-circle {
+            width: 100%;
+            height: 100%;
+            border: 2px solid var(--dark-surface-alt);
+            border-radius: 6px;
+            background: transparent;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .checkbox-input:hover ~ .checkbox-circle {
+            border-color: var(--accent);
+            background: rgba(245, 158, 11, 0.05);
+        }
+
+        .checkbox-input:checked ~ .checkbox-circle {
+            background: var(--accent);
+            border-color: var(--accent);
+            animation: checkmarkDraw 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .checkmark {
+            width: 14px;
+            height: 10px;
+            stroke: var(--dark-bg);
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
+            stroke-dasharray: 100;
+            stroke-dashoffset: 100;
+        }
+
+        .checkbox-input:checked ~ .checkbox-circle .checkmark {
+            animation: checkmarkDraw 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        .input-field {
+            background: var(--dark-surface);
+            border: 2px solid var(--dark-surface-alt);
+            border-radius: 12px;
+            padding: 14px 18px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            outline: none;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .input-field::placeholder {
+            color: var(--text-tertiary);
+        }
+
+        .input-field:focus {
+            border-color: var(--accent);
+            background: var(--dark-surface);
+            box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+        }
+
+        .input-field:hover:not(:focus) {
+            border-color: var(--text-tertiary);
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            font-family: 'Inter', sans-serif;
+            border: none;
+            outline: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: var(--dark-bg);
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(245, 158, 11, 0.25);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 0.85rem;
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.15);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.25);
+            border-color: rgba(239, 68, 68, 0.5);
+            color: #fecaca;
+        }
+
+        .btn-filter {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--dark-surface-alt);
+            padding: 8px 14px;
+        }
+
+        .btn-filter:hover {
+            border-color: var(--text-tertiary);
+            color: var(--text-primary);
+        }
+
+        .btn-filter.active {
+            background: var(--accent);
+            color: var(--dark-bg);
+            border-color: var(--accent);
+        }
+
+        .task-item {
+            background: var(--dark-surface);
+            border: 1px solid var(--dark-surface-alt);
+            border-radius: 10px;
+            padding: 16px;
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .task-item:hover {
+            border-color: var(--text-tertiary);
+            background: rgba(51, 65, 85, 0.5);
+            transform: translateX(4px);
+        }
+
+        .task-item.completed {
+            opacity: 0.6;
+        }
+
+        .task-item.completed .task-text {
+            text-decoration: line-through;
+            color: var(--text-tertiary);
+        }
+
+        .task-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .task-text {
+            color: var(--text-primary);
+            font-weight: 500;
+            word-break: break-word;
+            transition: all 0.3s ease;
+        }
+
+        .task-meta {
+            font-size: 0.8rem;
+            color: var(--text-tertiary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .task-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .counter {
+            font-family: 'Syne', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            transition: all 0.3s ease;
+        }
+
+        .counter-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 48px 24px;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 12px;
+            opacity: 0.5;
+        }
+
+        .empty-state-text {
+            color: var(--text-tertiary);
+            font-size: 1rem;
+        }
+
+        .reminder-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(239, 68, 68, 0.15);
+            color: #fca5a5;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            animation: pulse-subtle 2s ease-in-out infinite;
+        }
+
+        .reminder-notification {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: var(--dark-surface);
+            border: 2px solid var(--accent);
+            border-radius: 12px;
+            padding: 16px 20px;
+            color: var(--text-primary);
+            font-weight: 500;
+            animation: slideInUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            max-width: 320px;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+            z-index: 1000;
+        }
+
+        .reminder-notification.exit {
+            animation: slideOutDown 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        .reminder-icon {
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        .glass-effect {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .task-item {
+                flex-direction: column;
+                padding: 12px;
+            }
+
+            .task-actions {
+                width: 100%;
+                justify-content: flex-end;
+            }
+
+            .counter {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="min-h-screen">
+        <!-- Header -->
+        <header class="border-b border-slate-700/50 glass-effect sticky top-0 z-50">
+            <div class="max-w-3xl mx-auto px-6 py-8">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1>Flux</h1>
+                        <p class="text-text-secondary mt-1">Stay focused, stay organized</p>
+                    </div>
+                    <div class="text-right">
+                        <div class="counter" id="activeCounter">0</div>
+                        <div class="counter-label">tasks pending</div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-3xl mx-auto px-6 py-8">
+            <!-- Add Task Section -->
+            <section class="mb-8">
+                <form id="taskForm" class="flex gap-3">
+                    <input
+                        type="text"
+                        id="taskInput"
+                        class="input-field flex-1"
+                        placeholder="Add a task and press enter..."
+                        autocomplete="off"
+                    >
+                    <button type="submit" class="btn btn-primary">
+                        <span>+</span>
+                        <span>Add</span>
+                    </button>
+                </form>
+            </section>
+
+            <!-- Filter Tabs -->
+            <section class="mb-8">
+                <div class="flex gap-2 flex-wrap">
+                    <button class="btn btn-filter active" data-filter="all">All</button>
+                    <button class="btn btn-filter" data-filter="active">Active</button>
+                    <button class="btn btn-filter" data-filter="completed">Completed</button>
+                </div>
+            </section>
+
+            <!-- Task List -->
+            <section>
+                <div id="taskList" class="space-y-3">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">✨</div>
+                        <p class="empty-state-text">Your task list is empty. Start by adding your first task!</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Reminder Notification (template) -->
+    <div id="reminderContainer"></div>
+
+    <script>
+        // State Management
+        const state = {
+            tasks: [],
+            filter: 'all',
+            reminderShown: false
+        };
+
+        // DOM Elements
+        const taskForm = document.getElementById('taskForm');
+        const taskInput = document.getElementById('taskInput');
+        const taskList = document.getElementById('taskList');
+        const filterBtns = document.querySelectorAll('[data-filter]');
+        const activeCounter = document.getElementById('activeCounter');
+        const reminderContainer = document.getElementById('reminderContainer');
+
+        // Load tasks from localStorage
+        function loadTasks() {
+            const saved = localStorage.getItem('fluxTasks');
+            if (saved) {
+                try {
+                    state.tasks = JSON.parse(saved);
+                } catch (e) {
+                    state.tasks = [];
+                }
+            }
+        }
+
+        // Save tasks to localStorage
+        function saveTasks() {
+            localStorage.setItem('fluxTasks', JSON.stringify(state.tasks));
+        }
+
+        // Add new task
+        function addTask(text) {
+            if (!text.trim()) return;
+
+            const task = {
+                id: Date.now(),
+                text: text.trim(),
+                completed: false,
+                createdAt: new Date().toISOString()
+            };
+
+            state.tasks.unshift(task);
+            saveTasks();
+            renderTasks();
+            taskInput.value = '';
+            taskInput.focus();
+            showReminderIfNeeded();
+        }
+
+        // Toggle task completion
+        function toggleTask(id) {
+            const task = state.tasks.find(t => t.id === id);
+            if (task) {
+                task.completed = !task.completed;
+                saveTasks();
+                renderTasks();
+                showReminderIfNeeded();
+            }
+        }
+
+        // Delete task
+        function deleteTask(id) {
+            state.tasks = state.tasks.filter(t => t.id !== id);
+            saveTasks();
+            renderTasks();
+            showReminderIfNeeded();
+        }
+
+        // Get filtered tasks
+        function getFilteredTasks() {
+            switch (state.filter) {
+                case 'active':
+                    return state.tasks.filter(t => !t.completed);
+                case 'completed':
+                    return state.tasks.filter(t => t.completed);
+                default:
+                    return state.tasks;
+            }
+        }
+
+        // Get active task count
+        function getActiveCount() {
+            return state.tasks.filter(t => !t.completed).length;
+        }
+
+        // Format date
+        function formatDate(isoString) {
+            const date = new Date(isoString);
+            const today = new Date();
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+
+            if (date.toDateString() === today.toDateString()) {
+                return `Today at ${date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
+            } else if (date.toDateString() === yesterday.toDateString()) {
+                return `Yesterday at ${date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
+            } else {
+                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            }
+        }
+
+        // Render task list
+        function renderTasks() {
+            const filtered = getFilteredTasks();
+            const activeCount = getActiveCount();
+
+            // Update counter
+            activeCounter.textContent = activeCount;
+            activeCounter.style.color = activeCount === 0 ? 'var(--success)' : 'var(--accent)';
+
+            // Clear list
+            taskList.innerHTML = '';
+
+            if (filtered.length === 0) {
+                taskList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">${state.filter === 'completed' ? '🎉' : '📭'}</div>
+                        <p class="empty-state-text">
+                            ${state.filter === 'completed' ? 'No completed tasks yet. Keep working!' : 'No tasks in this category.'}
+                        </p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Render tasks
+            filtered.forEach((task, index) => {
+                const taskEl = document.createElement('div');
+                taskEl.className = `task-item ${task.completed ? 'completed' : ''} task-enter`;
+                taskEl.style.animationDelay = `${index * 50}ms`;
+
+                const hasReminder = !task.completed && getActiveCount() > 0;
+
+                taskEl.innerHTML = `
+                    <label class="checkbox-container">
+                        <input
+                            type="checkbox"
+                            class="checkbox-input"
+                            ${task.completed ? 'checked' : ''}
+                            onchange="toggleTask(${task.id})"
+                        >
+                        <div class="checkbox-circle">
+                            <svg class="checkmark" viewBox="0 0 16 12">
+                                <polyline points="2 6 6 10 14 2"></polyline>
+                            </svg>
+                        </div>
+                    </label>
+                    <div class="task-content">
+                        <div class="task-text">${escapeHtml(task.text)}</div>
+                        <div class="task-meta">
+                            <span>${formatDate(task.createdAt)}</span>
+                            ${hasReminder && !task.completed ? '<span class="reminder-badge"><span class="reminder-icon">🔔</span> Pending</span>' : ''}
+                        </div>
+                    </div>
+                    <div class="task-actions">
+                        <button class="btn btn-sm btn-danger" onclick="deleteTask(${task.id})">
+                            Delete
+                        </button>
+                    </div>
+                `;
+
+                taskList.appendChild(taskEl);
+            });
+        }
+
+        // Show reminder notification
+        function showReminderIfNeeded() {
+            const activeCount = getActiveCount();
+
+            if (activeCount > 0 && !state.reminderShown) {
+                state.reminderShown = true;
+
+                setTimeout(() => {
+                    const notification = document.createElement('div');
+                    notification.className = 'reminder-notification';
+                    notification.innerHTML = `
+                        <span class="reminder-icon">🎯</span>
+                        <strong>${activeCount} task${activeCount > 1 ? 's' : ''} waiting!</strong> Keep focus and make progress.
+                    `;
+
+                    reminderContainer.appendChild(notification);
+
+                    // Auto remove after 4 seconds
+                    setTimeout(() => {
+                        notification.classList.add('exit');
+                        setTimeout(() => {
+                            notification.remove();
+                            state.reminderShown = false;
+                        }, 300);
+                    }, 4000);
+                }, 300);
+            }
+        }
+
+        // Escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Event Listeners
+        taskForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            addTask(taskInput.value);
+        });
+
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                filterBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                state.filter = btn.dataset.filter;
+                renderTasks();
+            });
+        });
+
+        // Initialize
+        loadTasks();
+        renderTasks();
+    </script>
+</body>
+</html>
